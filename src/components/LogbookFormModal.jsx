@@ -35,6 +35,23 @@ export default function LogbookFormModal({ isOpen, onClose, onSave, initialData 
     setIsDragging(false);
   }, [initialData, isOpen]);
 
+  // Prevent browser default window drop behavior (which cancels file drop or opens file in new tab)
+  useEffect(() => {
+    const preventWindowDrop = (e) => {
+      e.preventDefault();
+    };
+
+    if (isOpen) {
+      window.addEventListener('dragover', preventWindowDrop);
+      window.addEventListener('drop', preventWindowDrop);
+    }
+
+    return () => {
+      window.removeEventListener('dragover', preventWindowDrop);
+      window.removeEventListener('drop', preventWindowDrop);
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const processSelectedFile = (file) => {
@@ -224,7 +241,7 @@ export default function LogbookFormModal({ isOpen, onClose, onSave, initialData 
                 {/* Symmetrical Upload Buttons */}
                 <div className="image-upload-actions">
                   {/* File Input Trigger */}
-                  <label className="btn btn-secondary cursor-pointer">
+                  <label className="btn btn-secondary image-upload-btn cursor-pointer">
                     <Upload size={16} /> Upload Gambar
                     <input
                       ref={fileInputRef}
@@ -239,7 +256,7 @@ export default function LogbookFormModal({ isOpen, onClose, onSave, initialData 
                   <button
                     type="button"
                     onClick={() => setIsCameraOpen(true)}
-                    className="btn btn-secondary"
+                    className="btn btn-secondary image-upload-btn"
                   >
                     <Camera size={16} /> Ambil dari Kamera
                   </button>
