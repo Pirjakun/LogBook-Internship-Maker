@@ -211,6 +211,21 @@ export async function exportToWord(logbooks, title = "LOGBOOK MAGANG") {
     ]
   });
 
-  const blob = await Packer.toBlob(doc);
-  saveAs(blob, `Logbook_Magang_${new Date().toISOString().slice(0, 10)}.docx`);
+  const docBlob = await Packer.toBlob(doc);
+  const blob = new Blob([docBlob], { 
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+  });
+  const fileName = `Logbook_Magang_${new Date().toISOString().slice(0, 10)}.docx`;
+
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }, 1000);
 }

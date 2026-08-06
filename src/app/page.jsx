@@ -13,7 +13,8 @@ import {
   User as UserIcon,
   ShieldCheck,
   ArrowRight,
-  Download
+  Download,
+  Trash2
 } from 'lucide-react';
 import { 
   getLogbooks, 
@@ -40,6 +41,7 @@ export default function HomePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [editingEntry, setEditingEntry] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const [isExportingWord, setIsExportingWord] = useState(false);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
 
@@ -125,14 +127,19 @@ export default function HomePage() {
     setLogbooks(data);
   };
 
-  const handleDeleteEntry = async (id) => {
+  const handleDeleteEntry = (id) => {
     if (!id) return;
-    const isConfirmed = confirm('Apakah Anda yakin ingin menghapus catatan logbook ini?');
-    if (!isConfirmed) return;
+    setDeletingId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingId) return;
+    const targetId = deletingId;
+    setDeletingId(null);
 
     try {
-      setLogbooks(prev => prev.filter(item => item.id !== id));
-      await deleteLogbook(id);
+      setLogbooks(prev => prev.filter(item => item.id !== targetId));
+      await deleteLogbook(targetId);
       const data = await getLogbooks();
       setLogbooks(data);
     } catch (err) {
@@ -393,6 +400,39 @@ export default function HomePage() {
         onSave={handleSaveEntry}
         initialData={editingEntry}
       />
+
+      {/* Delete Confirmation Modal */}
+      {deletingId && (
+        <div className="modal-backdrop" onClick={() => setDeletingId(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '380px', textAlign: 'center', padding: '1.5rem', borderRadius: '16px' }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#fee2e2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
+              <Trash2 size={24} />
+            </div>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-main)' }}>Hapus Entri Logbook?</h3>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: '1.4' }}>
+              Apakah Anda yakin ingin menghapus catatan logbook ini? Data yang dihapus tidak dapat dikembalikan.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setDeletingId(null)}
+                className="btn btn-secondary"
+                style={{ flex: 1, height: '42px', justifyContent: 'center' }}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="btn"
+                style={{ flex: 1, height: '42px', justifyContent: 'center', backgroundColor: '#ef4444', color: 'white' }}
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

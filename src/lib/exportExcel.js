@@ -83,6 +83,20 @@ export async function exportToExcel(logbooks, title = "LOGBOOK MAGANG") {
 
   // Write buffer and trigger download
   const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  saveAs(blob, `Logbook_Magang_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  const blob = new Blob([buffer], { 
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+  });
+  const fileName = `Logbook_Magang_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }, 1000);
 }
