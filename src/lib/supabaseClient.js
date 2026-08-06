@@ -223,6 +223,57 @@ export async function deleteLogbook(id) {
   }
 }
 
+// Image Compression & Resizing Helper (Max 1200px, 80% JPEG Quality)
+export async function compressImage(file, maxWidth = 1200, maxHeight = 1200, quality = 0.8) {
+  return new Promise((resolve) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+      return resolve(file);
+    }
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) return resolve(file);
+            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile);
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = () => resolve(file);
+    };
+    reader.onerror = () => resolve(file);
+  });
+}
+
 // Upload Image
 export async function uploadDokumentasi(file) {
   if (!file) return '';
@@ -233,14 +284,17 @@ export async function uploadDokumentasi(file) {
     throw new Error(validation.error);
   }
 
+  // Compress image before uploading to reduce dimensions & payload size
+  const processedFile = await compressImage(file);
+
   if (isSupabaseConfigured && supabase) {
-    const fileExt = file.name.split('.').pop() || 'jpg';
+    const fileExt = processedFile.name.split('.').pop() || 'jpg';
     const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
 
     const { error: uploadError } = await supabase
       .storage
       .from('dokumentasi')
-      .upload(fileName, file, {
+      .upload(fileName, processedFile, {
         cacheControl: '3600',
         upsert: true
       });
@@ -262,7 +316,7 @@ export async function uploadDokumentasi(file) {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result);
       reader.onerror = reject;
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(processedFile);
     });
   }
 }
