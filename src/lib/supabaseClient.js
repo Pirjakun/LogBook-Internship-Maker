@@ -117,12 +117,18 @@ export async function getCurrentUser() {
   }
 }
 
-// Get Logbooks Data
+// Get Logbooks Data (Strictly isolated by user_id)
 export async function getLogbooks() {
+  const currentUser = await getCurrentUser();
+  const userId = currentUser ? currentUser.id : null;
+
   if (isSupabaseConfigured && supabase) {
+    if (!userId) return [];
+
     const { data, error } = await supabase
       .from('logbooks')
       .select('*')
+      .eq('user_id', userId)
       .order('tanggal', { ascending: true })
       .order('minggu', { ascending: true });
 
@@ -132,27 +138,34 @@ export async function getLogbooks() {
     }
     return data || [];
   } else {
-    if (typeof window === 'undefined') return INITIAL_MOCK_DATA;
-    const stored = localStorage.getItem('logbook_data');
+    if (typeof window === 'undefined') return [];
+    if (!userId) return [];
+
+    const storageKey = `logbook_data_${userId}`;
+    const stored = localStorage.getItem(storageKey);
     if (!stored) {
-      localStorage.setItem('logbook_data', JSON.stringify(INITIAL_MOCK_DATA));
-      return INITIAL_MOCK_DATA;
+      return [];
     }
     return JSON.parse(stored);
   }
 }
 
-// Save/Add Logbook Entry
+// Save/Add Logbook Entry (Strictly bound to current user_id)
 export async function saveLogbook(entry) {
   const currentUser = await getCurrentUser();
   const userId = currentUser ? currentUser.id : null;
+
+  if (!userId) {
+    throw new Error('Anda harus login terlebih dahulu.');
+  }
 
   if (isSupabaseConfigured && supabase) {
       const payload = {
         minggu: Number(entry.minggu),
         tanggal: entry.tanggal,
         kegiatan: entry.kegiatan,
-        dokumentasi_url: entry.dokumentasi_url || entry.dokumentasi || null
+        dokumentasi_url: entry.dokumentasi_url || entry.dokumentasi || null,
+        user_id: userId
       };
 
       if (entry.id && typeof entry.id === 'string' && entry.id.length > 10) {
@@ -161,16 +174,13 @@ export async function saveLogbook(entry) {
           .from('logbooks')
           .update(payload)
           .eq('id', entry.id)
+          .eq('user_id', userId)
           .select();
 
         if (error) throw error;
         return data[0];
       } else {
         // Insert
-        if (userId) {
-          payload.user_id = userId;
-        }
-
         const { data, error } = await supabase
           .from('logbooks')
           .insert([payload])
@@ -180,46 +190,53 @@ export async function saveLogbook(entry) {
         return data[0];
       }
   } else {
-    // LocalStorage Fallback
+    // LocalStorage Fallback (Strictly per user)
+    const storageKey = `logbook_data_${userId}`;
     const list = await getLogbooks();
     let updatedList;
     if (entry.id) {
-      updatedList = list.map(item => item.id === entry.id ? { ...item, ...entry } : item);
+      updatedList = list.map(item => item.id === entry.id ? { ...item, ...entry, user_id: userId } : item);
     } else {
       const newEntry = {
         ...entry,
         id: Date.now().toString(),
+        user_id: userId,
         created_at: new Date().toISOString()
       };
       updatedList = [...list, newEntry];
     }
-    localStorage.setItem('logbook_data', JSON.stringify(updatedList));
+    localStorage.setItem(storageKey, JSON.stringify(updatedList));
     return entry;
   }
 }
 
-// Delete Logbook Entry
+// Delete Logbook Entry (Strictly bound to current user_id)
 export async function deleteLogbook(id) {
   if (!id) return;
+  const currentUser = await getCurrentUser();
+  const userId = currentUser ? currentUser.id : null;
+
+  if (!userId) return;
 
   if (isSupabaseConfigured && supabase) {
-    // Only query Supabase if id is a valid UUID format
     const isUuid = typeof id === 'string' && id.length > 20;
 
     if (isUuid) {
       const { error } = await supabase
         .from('logbooks')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', userId);
 
       if (error) throw error;
     } else {
       console.warn('Id is not a valid UUID, skipping remote Supabase delete:', id);
     }
   } else {
+    const storageKey = `logbook_data_${userId}`;
     const list = await getLogbooks();
     const filtered = list.filter(item => item.id !== id);
-    localStorage.setItem('logbook_data', JSON.stringify(filtered));
+    localStorage.setItem(storageKey, JSON.stringify(filtered));
   }
 }
 
