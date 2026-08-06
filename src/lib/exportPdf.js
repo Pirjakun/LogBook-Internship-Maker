@@ -74,7 +74,7 @@ export async function exportToPdf(logbooks, title = "LOGBOOK MAGANG") {
     }
   }
 
-  // Generate Table
+  // Generate Table using jsPDF-AutoTable
   autoTable(doc, {
     startY: 22,
     head: [['No', 'Minggu', 'Hari / Tanggal', 'Kegiatan / Deskripsi', 'Dokumentasi']],
@@ -86,20 +86,31 @@ export async function exportToPdf(logbooks, title = "LOGBOOK MAGANG") {
       textColor: [0, 0, 0],
       lineColor: [180, 180, 180],
       lineWidth: 0.2,
-      valign: 'middle'
+      valign: 'middle',
+      minCellHeight: 12
     },
     headStyles: {
       fillColor: [239, 239, 239],
       textColor: [0, 0, 0],
       fontStyle: 'bold',
-      halign: 'center'
+      halign: 'center',
+      minCellHeight: 10
     },
     columnStyles: {
       0: { cellWidth: 12, halign: 'center' },  // No
       1: { cellWidth: 22, halign: 'center' },  // Minggu
       2: { cellWidth: 40, halign: 'left' },    // Tanggal
-      3: { cellWidth: 72, halign: 'left' },    // Kegiatan
+      3: { cellWidth: 68, halign: 'left' },    // Kegiatan
       4: { cellWidth: 40, halign: 'center' }   // Dokumentasi
+    },
+    didParseCell: (data) => {
+      // Ensure rows containing images expand height properly to 28mm
+      if (data.section === 'body') {
+        const rowIndex = data.row.index;
+        if (imageMap[rowIndex]) {
+          data.cell.styles.minCellHeight = 28;
+        }
+      }
     },
     didDrawCell: (data) => {
       if (data.section === 'body' && data.column.index === 4) {
@@ -108,15 +119,15 @@ export async function exportToPdf(logbooks, title = "LOGBOOK MAGANG") {
 
         if (imgObj && imgObj.dataUrl) {
           const cell = data.cell;
-          // Calculate proportional aspect ratio fit (max width 34mm, max height 22mm)
+          // Calculate proportional aspect ratio fit inside cell (max width 34mm, max height 24mm)
           const maxW = 34;
-          const maxH = 22;
+          const maxH = 24;
 
           const ratio = Math.min(maxW / imgObj.width, maxH / imgObj.height);
           const finalW = imgObj.width * ratio;
           const finalH = imgObj.height * ratio;
 
-          // Center image in table cell
+          // Center image vertically & horizontally inside the expanded cell
           const posX = cell.x + (cell.width - finalW) / 2;
           const posY = cell.y + (cell.height - finalH) / 2;
 
@@ -128,9 +139,7 @@ export async function exportToPdf(logbooks, title = "LOGBOOK MAGANG") {
           }
         }
       }
-    },
-    rowPageBreak: 'avoid',
-    minRowHeight: 26
+    }
   });
 
   // Save PDF using Base64 Data URL to force exact filename
