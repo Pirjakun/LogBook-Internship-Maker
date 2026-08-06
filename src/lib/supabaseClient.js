@@ -200,13 +200,22 @@ export async function saveLogbook(entry) {
 
 // Delete Logbook Entry
 export async function deleteLogbook(id) {
-  if (isSupabaseConfigured && supabase) {
-    const { error } = await supabase
-      .from('logbooks')
-      .delete()
-      .eq('id', id);
+  if (!id) return;
 
-    if (error) throw error;
+  if (isSupabaseConfigured && supabase) {
+    // Only query Supabase if id is a valid UUID format
+    const isUuid = typeof id === 'string' && id.length > 20;
+
+    if (isUuid) {
+      const { error } = await supabase
+        .from('logbooks')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } else {
+      console.warn('Id is not a valid UUID, skipping remote Supabase delete:', id);
+    }
   } else {
     const list = await getLogbooks();
     const filtered = list.filter(item => item.id !== id);

@@ -126,8 +126,18 @@ export default function HomePage() {
   };
 
   const handleDeleteEntry = async (id) => {
-    if (confirm('Apakah Anda yakin ingin menghapus catatan logbook ini?')) {
+    if (!id) return;
+    const isConfirmed = confirm('Apakah Anda yakin ingin menghapus catatan logbook ini?');
+    if (!isConfirmed) return;
+
+    try {
+      setLogbooks(prev => prev.filter(item => item.id !== id));
       await deleteLogbook(id);
+      const data = await getLogbooks();
+      setLogbooks(data);
+    } catch (err) {
+      console.error('Error deleting logbook entry:', err);
+      alert('Gagal menghapus entri: ' + (err.message || 'Terjadi kesalahan'));
       const data = await getLogbooks();
       setLogbooks(data);
     }
