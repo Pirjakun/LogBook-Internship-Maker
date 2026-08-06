@@ -227,12 +227,11 @@ export async function uploadDokumentasi(file) {
   if (isSupabaseConfigured && supabase) {
     const fileExt = file.name.split('.').pop() || 'jpg';
     const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
-    const filePath = `dokumentasi/${fileName}`;
 
     const { error: uploadError } = await supabase
       .storage
-      .from('logbook-images')
-      .upload(filePath, file);
+      .from('dokumentasi')
+      .upload(fileName, file);
 
     if (uploadError) {
       console.error('Error uploading image to Supabase Storage:', uploadError);
@@ -241,8 +240,8 @@ export async function uploadDokumentasi(file) {
 
     const { data: publicUrlData } = supabase
       .storage
-      .from('logbook-images')
-      .getPublicUrl(filePath);
+      .from('dokumentasi')
+      .getPublicUrl(fileName);
 
     return publicUrlData.publicUrl;
   } else {
