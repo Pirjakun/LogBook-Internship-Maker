@@ -88,15 +88,19 @@ export async function exportToExcel(logbooks, title = "LOGBOOK MAGANG") {
   });
   const fileName = `Logbook_Magang_${new Date().toISOString().slice(0, 10)}.xlsx`;
 
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.style.display = 'none';
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-  }, 1000);
+  // Use FileReader Data URL to prevent Chrome/Edge from falling back to Blob UUID filename
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = dataUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+    }, 1000);
+  };
+  reader.readAsDataURL(blob);
 }
