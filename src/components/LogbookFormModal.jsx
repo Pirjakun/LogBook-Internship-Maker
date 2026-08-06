@@ -59,15 +59,27 @@ export default function LogbookFormModal({ isOpen, onClose, onSave, initialData 
     }
   };
 
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
   const handleDragOver = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
     setIsDragging(true);
   };
 
   const handleDragLeave = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (e.currentTarget && e.currentTarget.contains(e.relatedTarget)) {
+      return;
+    }
     setIsDragging(false);
   };
 
@@ -76,7 +88,16 @@ export default function LogbookFormModal({ isOpen, onClose, onSave, initialData 
     e.stopPropagation();
     setIsDragging(false);
 
-    const file = e.dataTransfer.files?.[0];
+    let file = null;
+    if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+      file = e.dataTransfer.files[0];
+    } else if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
+      const item = e.dataTransfer.items[0];
+      if (item.kind === 'file') {
+        file = item.getAsFile();
+      }
+    }
+
     if (file) {
       processSelectedFile(file);
     }
@@ -243,6 +264,7 @@ export default function LogbookFormModal({ isOpen, onClose, onSave, initialData 
                   </div>
                 ) : (
                   <div
+                    onDragEnter={handleDragEnter}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}

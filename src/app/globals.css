@@ -878,6 +878,11 @@ body {
   cursor: pointer;
   background-color: #f8fafc;
   transition: all 0.2s ease;
+  user-select: none;
+}
+
+.image-preview-placeholder * {
+  pointer-events: none;
 }
 
 .image-preview-placeholder:hover,
