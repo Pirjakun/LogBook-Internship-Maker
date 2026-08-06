@@ -148,37 +148,37 @@ export async function saveLogbook(entry) {
   const userId = currentUser ? currentUser.id : null;
 
   if (isSupabaseConfigured && supabase) {
-    if (entry.id && typeof entry.id === 'string' && entry.id.length > 10) {
-      // Update
-      const { data, error } = await supabase
-        .from('logbooks')
-        .update({
-          minggu: entry.minggu,
-          tanggal: entry.tanggal,
-          kegiatan: entry.kegiatan,
-          dokumentasi_url: entry.dokumentasi_url,
-        })
-        .eq('id', entry.id)
-        .select();
+      const payload = {
+        minggu: Number(entry.minggu),
+        tanggal: entry.tanggal,
+        kegiatan: entry.kegiatan,
+        dokumentasi_url: entry.dokumentasi_url || entry.dokumentasi || null
+      };
 
-      if (error) throw error;
-      return data[0];
-    } else {
-      // Insert
-      const { data, error } = await supabase
-        .from('logbooks')
-        .insert([{
-          user_id: userId,
-          minggu: entry.minggu,
-          tanggal: entry.tanggal,
-          kegiatan: entry.kegiatan,
-          dokumentasi_url: entry.dokumentasi_url,
-        }])
-        .select();
+      if (entry.id && typeof entry.id === 'string' && entry.id.length > 10) {
+        // Update
+        const { data, error } = await supabase
+          .from('logbooks')
+          .update(payload)
+          .eq('id', entry.id)
+          .select();
 
-      if (error) throw error;
-      return data[0];
-    }
+        if (error) throw error;
+        return data[0];
+      } else {
+        // Insert
+        if (userId) {
+          payload.user_id = userId;
+        }
+
+        const { data, error } = await supabase
+          .from('logbooks')
+          .insert([payload])
+          .select();
+
+        if (error) throw error;
+        return data[0];
+      }
   } else {
     // LocalStorage Fallback
     const list = await getLogbooks();

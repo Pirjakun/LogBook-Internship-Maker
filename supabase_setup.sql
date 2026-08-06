@@ -1,36 +1,49 @@
--- SQL Script Setup untuk Supabase Project (Termasuk Google Auth Support)
--- Jalankan di SQL Editor di dashboard Supabase (https://app.supabase.com)
-
--- 1. Buat Tabel Logbook dengan dukungan user_id
-CREATE TABLE IF NOT EXISTS public.logbooks (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  minggu VARCHAR(50) NOT NULL,
-  tanggal DATE NOT NULL,
-  kegiatan TEXT,
-  dokumentasi_url TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+-- 1. Buat Tabel Logbooks (jika belum ada)
+create table if not exists logbooks (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade default auth.uid(),
+  minggu integer not null,
+  tanggal text not null,
+  kegiatan text not null,
+  dokumentasi_url text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- Enable RLS
-ALTER TABLE public.logbooks ENABLE ROW LEVEL SECURITY;
+-- Tambahkan kolom dokumentasi_url jika belum ada
+do $$ 
+begin 
+  if not exists (select 1 from information_schema.columns where table_name='logbooks' and column_name='dokumentasi_url') then
+    alter table logbooks add column dokumentasi_url text;
+  end if;
+end $$;
 
--- Policies untuk pengguna terautentikasi (Auth)
-DROP POLICY IF EXISTS "Allow user logbook access" ON public.logbooks;
-CREATE POLICY "Allow user logbook access" ON public.logbooks 
-  FOR ALL 
-  USING (auth.uid() = user_id OR user_id IS NULL) 
-  WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
+-- 2. Hapus policy lama untuk mencegah bentrok
+drop policy if exists "User dapat melihat logbook sendiri" on logbooks;
+drop policy if exists "User dapat menambah logbook sendiri" on logbooks;
+drop policy if exists "User dapat mengubah logbook sendiri" on logbooks;
+drop policy if exists "User dapat menghapus logbook sendiri" on logbooks;
+drop policy if exists "Enable all for authenticated users" on logbooks;
 
--- 2. Storage Bucket Setup
-INSERT INTO storage.buckets (id, name, public) 
-VALUES ('logbook-images', 'logbook-images', true)
-ON CONFLICT (id) DO NOTHING;
+-- 3. Aktifkan Keamanan RLS
+alter table logbooks enable row level security;
 
--- Policy Storage
-DROP POLICY IF EXISTS "Allow public read storage" ON storage.objects;
-DROP POLICY IF EXISTS "Allow authenticated upload storage" ON storage.objects;
+-- 4. Kebijakan Keamanan RLS (Row Level Security) yang Aman & Stabil
+create policy "User dapat melihat logbook sendiri" 
+  on logbooks for select 
+  to authenticated 
+  using (auth.uid() = user_id or user_id is null);
 
-CREATE POLICY "Allow public read storage" ON storage.objects FOR SELECT USING (bucket_id = 'logbook-images');
-CREATE POLICY "Allow authenticated upload storage" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'logbook-images');
-CREATE POLICY "Allow authenticated delete storage" ON storage.objects FOR DELETE USING (bucket_id = 'logbook-images');
+create policy "User dapat menambah logbook sendiri" 
+  on logbooks for insert 
+  to authenticated 
+  with check (auth.uid() = user_id or user_id is null);
+
+create policy "User dapat mengubah logbook sendiri" 
+  on logbooks for update 
+  to authenticated 
+  using (auth.uid() = user_id or user_id is null);
+
+create policy "User dapat menghapus logbook sendiri" 
+  on logbooks for delete 
+  to authenticated 
+  using (auth.uid() = user_id or user_id is null);
