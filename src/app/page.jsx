@@ -21,6 +21,7 @@ import {
   saveLogbook, 
   deleteLogbook, 
   isSupabaseConfigured,
+  supabase,
   getCurrentUser,
   signInWithGoogle,
   signOutUser 
@@ -57,6 +58,8 @@ export default function HomePage() {
       if (currentUser) {
         const data = await getLogbooks();
         setLogbooks(data);
+      } else {
+        setLogbooks([]);
       }
     } catch (err) {
       console.error('Error loading logbooks:', err);
@@ -68,10 +71,31 @@ export default function HomePage() {
   useEffect(() => {
     loadInitialData();
 
+    // Subscribe to auth state changes to dynamically switch logbooks per user
+    let subscription = null;
+    if (isSupabaseConfigured && supabase) {
+      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+        const currentUser = session?.user || null;
+        setUser(currentUser);
+        if (currentUser) {
+          const data = await getLogbooks();
+          setLogbooks(data);
+        } else {
+          setLogbooks([]);
+        }
+        setIsLoading(false);
+      });
+      subscription = data?.subscription;
+    }
+
     // Auto switch to card view on small screens
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setViewMode('card');
     }
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
   const handleGoogleLogin = async () => {
