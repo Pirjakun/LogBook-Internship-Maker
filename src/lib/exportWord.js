@@ -27,15 +27,41 @@ export function formatTanggalIndo(dateString) {
   });
 }
 
-// Fetch image array buffer for embedding into DOCX
-async function fetchImageBuffer(url) {
+// Fetch image array buffer & calculate proportional dimensions for Word export
+async function fetchImageDataAndDimensions(url, maxW = 140, maxH = 110) {
   try {
     if (!url) return null;
     const response = await fetch(url);
     if (!response.ok) return null;
     const blob = await response.blob();
     const arrayBuffer = await blob.arrayBuffer();
-    return arrayBuffer;
+
+    // Get original image natural dimensions
+    const dataUrl = URL.createObjectURL(blob);
+    const dimensions = await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const res = { width: img.naturalWidth || 120, height: img.naturalHeight || 90 };
+        URL.revokeObjectURL(dataUrl);
+        resolve(res);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(dataUrl);
+        resolve({ width: 120, height: 90 });
+      };
+      img.src = dataUrl;
+    });
+
+    // Proportional aspect-ratio scaling
+    const ratio = Math.min(maxW / dimensions.width, maxH / dimensions.height);
+    const finalWidth = Math.round(dimensions.width * ratio);
+    const finalHeight = Math.round(dimensions.height * ratio);
+
+    return {
+      buffer: arrayBuffer,
+      width: finalWidth,
+      height: finalHeight
+    };
   } catch (err) {
     console.warn('Could not fetch image for Word export:', err);
     return null;
@@ -47,11 +73,11 @@ export async function exportToWord(logbooks, title = "LOGBOOK MAGANG") {
 
   // Header Row
   const headers = [
-    { text: "No", width: 800, align: AlignmentType.CENTER },
-    { text: "Minggu", width: 1200, align: AlignmentType.CENTER },
-    { text: "Hari / Tanggal", width: 2200, align: AlignmentType.LEFT },
-    { text: "Kegiatan / Deskripsi", width: 3800, align: AlignmentType.LEFT },
-    { text: "Dokumentasi", width: 2000, align: AlignmentType.CENTER }
+    { text: "No", width: 600, align: AlignmentType.CENTER },
+    { text: "Minggu", width: 1000, align: AlignmentType.CENTER },
+    { text: "Hari / Tanggal", width: 2000, align: AlignmentType.LEFT },
+    { text: "Kegiatan / Deskripsi", width: 4000, align: AlignmentType.LEFT },
+    { text: "Dokumentasi", width: 2400, align: AlignmentType.CENTER }
   ];
 
   const headerCells = headers.map(h => new TableCell({
@@ -77,19 +103,19 @@ export async function exportToWord(logbooks, title = "LOGBOOK MAGANG") {
   // Data Rows
   for (let index = 0; index < logbooks.length; index++) {
     const item = logbooks[index];
-    const imageBuffer = item.dokumentasi_url ? await fetchImageBuffer(item.dokumentasi_url) : null;
+    const imageData = item.dokumentasi_url ? await fetchImageDataAndDimensions(item.dokumentasi_url) : null;
 
     let docCellChildren = [];
-    if (imageBuffer) {
+    if (imageData && imageData.buffer) {
       docCellChildren = [
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [
             new ImageRun({
-              data: imageBuffer,
+              data: imageData.buffer,
               transformation: {
-                width: 100,
-                height: 75
+                width: imageData.width,
+                height: imageData.height
               }
             })
           ]
@@ -114,7 +140,7 @@ export async function exportToWord(logbooks, title = "LOGBOOK MAGANG") {
       children: [
         // No
         new TableCell({
-          width: { size: 800, type: WidthType.DXA },
+          width: { size: 600, type: WidthType.DXA },
           children: [
             new Paragraph({
               alignment: AlignmentType.CENTER,
@@ -130,7 +156,7 @@ export async function exportToWord(logbooks, title = "LOGBOOK MAGANG") {
         }),
         // Minggu
         new TableCell({
-          width: { size: 1200, type: WidthType.DXA },
+          width: { size: 1000, type: WidthType.DXA },
           children: [
             new Paragraph({
               alignment: AlignmentType.CENTER,
@@ -146,7 +172,7 @@ export async function exportToWord(logbooks, title = "LOGBOOK MAGANG") {
         }),
         // Hari/Tanggal
         new TableCell({
-          width: { size: 2200, type: WidthType.DXA },
+          width: { size: 2000, type: WidthType.DXA },
           children: [
             new Paragraph({
               children: [
@@ -161,7 +187,7 @@ export async function exportToWord(logbooks, title = "LOGBOOK MAGANG") {
         }),
         // Kegiatan
         new TableCell({
-          width: { size: 3800, type: WidthType.DXA },
+          width: { size: 4000, type: WidthType.DXA },
           children: [
             new Paragraph({
               children: [
@@ -176,7 +202,7 @@ export async function exportToWord(logbooks, title = "LOGBOOK MAGANG") {
         }),
         // Dokumentasi
         new TableCell({
-          width: { size: 2000, type: WidthType.DXA },
+          width: { size: 2400, type: WidthType.DXA },
           children: docCellChildren
         })
       ]
