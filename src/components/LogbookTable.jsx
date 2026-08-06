@@ -17,7 +17,7 @@ export default function LogbookTable({ logbooks, onEdit, onDelete }) {
               <th style={{ width: '100px', textAlign: 'center' }}>Minggu</th>
               <th style={{ width: '220px' }}>Hari/Tanggal</th>
               <th>Kegiatan / Deskripsi</th>
-              <th style={{ width: '160px', textAlign: 'center' }}>Dokumentasi</th>
+              <th style={{ width: '140px', maxWidth: '140px', textAlign: 'center' }}>Dokumentasi</th>
               <th className="no-print" style={{ width: '100px', textAlign: 'center' }}>Aksi</th>
             </tr>
           </thead>
@@ -48,7 +48,7 @@ export default function LogbookTable({ logbooks, onEdit, onDelete }) {
                   </td>
                   
                   {/* Dokumentasi */}
-                  <td style={{ textAlign: 'center' }}>
+                  <td style={{ textAlign: 'center', width: '140px', maxWidth: '140px' }}>
                     {item.dokumentasi_url ? (
                       <div className="dokumentasi-thumb-container">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
