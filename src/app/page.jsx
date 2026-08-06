@@ -217,17 +217,6 @@ export default function HomePage() {
                 </>
               )}
             </button>
-
-            {/* Fallback Demo Mode */}
-            {!isSupabaseConfigured && (
-              <button
-                onClick={handleGoogleLogin}
-                className="btn btn-secondary"
-                style={{ height: '44px', width: '100%', justifyContent: 'center' }}
-              >
-                Masuk Mode Demo <ArrowRight size={16} />
-              </button>
-            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1.25rem' }}>
