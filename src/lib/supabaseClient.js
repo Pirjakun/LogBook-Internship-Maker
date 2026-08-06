@@ -231,7 +231,10 @@ export async function uploadDokumentasi(file) {
     const { error: uploadError } = await supabase
       .storage
       .from('dokumentasi')
-      .upload(fileName, file);
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: true
+      });
 
     if (uploadError) {
       console.error('Error uploading image to Supabase Storage:', uploadError);
