@@ -27,6 +27,7 @@ import {
 } from '../lib/supabaseClient';
 import { exportToWord } from '../lib/exportWord';
 import { exportToExcel } from '../lib/exportExcel';
+import { exportToPdf } from '../lib/exportPdf';
 import LogbookTable from '../components/LogbookTable';
 import LogbookMobileCard from '../components/LogbookMobileCard';
 import LogbookFormModal from '../components/LogbookFormModal';
@@ -44,6 +45,7 @@ export default function HomePage() {
   const [deletingId, setDeletingId] = useState(null);
   const [isExportingWord, setIsExportingWord] = useState(false);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   // Load User & Data
   const loadInitialData = async () => {
@@ -150,6 +152,18 @@ export default function HomePage() {
     }
   };
 
+  const handleExportPdf = async () => {
+    try {
+      setIsExportingPdf(true);
+      await exportToPdf(filteredLogbooks);
+    } catch (err) {
+      console.error('Export PDF Error:', err);
+      alert('Gagal mengeksport file PDF. ' + err.message);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   const handleExportWord = async () => {
     try {
       setIsExportingWord(true);
@@ -176,7 +190,9 @@ export default function HomePage() {
 
   const handleExportSelect = (e) => {
     const value = e.target.value;
-    if (value === 'word') {
+    if (value === 'pdf') {
+      handleExportPdf();
+    } else if (value === 'word') {
       handleExportWord();
     } else if (value === 'excel') {
       handleExportExcel();
@@ -327,11 +343,12 @@ export default function HomePage() {
                 onChange={handleExportSelect}
                 defaultValue=""
                 className="custom-select export-select-input"
-                disabled={isExportingWord || isExportingExcel || filteredLogbooks.length === 0}
+                disabled={isExportingWord || isExportingExcel || isExportingPdf || filteredLogbooks.length === 0}
               >
                 <option value="" disabled hidden>
-                  {isExportingWord ? 'Proses Word...' : isExportingExcel ? 'Proses Excel...' : 'Export'}
+                  {isExportingPdf ? 'Proses PDF...' : isExportingWord ? 'Proses Word...' : isExportingExcel ? 'Proses Excel...' : 'Export'}
                 </option>
+                <option value="pdf">📕 Export PDF (.pdf)</option>
                 <option value="word">📄 Export Word (.docx)</option>
                 <option value="excel">📊 Export Excel (.xlsx)</option>
               </select>
